@@ -66,16 +66,30 @@ module IRB
     def self.retrieve_files_to_require_from_load_path
       @@files_from_load_path ||=
         (
+          dlext = RbConfig::CONFIG['DLEXT']
+          pattern = "**/*.{rb,#{dlext}}"
+          dlext = ".#{dlext}"
           shortest = []
           rest = retrieve_gem_and_system_load_path.each_with_object([]) { |path, result|
             begin
-              names = Dir.glob("**/*.{rb,#{RbConfig::CONFIG['DLEXT']}}", base: path)
+              names = Dir.glob(pattern, base: path)
             rescue Errno::ENOENT
-              nil
+              next
             end
             next if names.empty?
-            names.map! { |n| n.sub(/\.(rb|#{RbConfig::CONFIG['DLEXT']})\z/, '') }.sort!
-            shortest << names.shift
+            names.each {|n| n.chomp!(".rb") || n.chomp!(dlext)}.uniq!
+            names, short = names.partition {|n| n.include?("/")}
+            if short.empty?
+              # Try rinda/rinda.rb pattern
+              names.delete_if {|n| short << n if %r[\A([^/]+)/\1\z].match?(n)}
+            end
+            unless names.empty?
+              names.sort_by! {|n| [n.count("/"), n]}
+              if short.empty?
+                short << names.shift
+              end
+            end
+            shortest.concat(short)
             result.concat(names)
           }
           shortest.sort! | rest
