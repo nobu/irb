@@ -52,7 +52,7 @@ jobs:
     env:
       WITH_LATEST_RELINE: ${{matrix.with_latest_reline}}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
